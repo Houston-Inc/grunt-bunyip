@@ -86,6 +86,11 @@ BunyipRunner.prototype.run = function(options) {
         self.emit("data", data);
         console.log(strData);
     });
+    setTimeout(function() {
+        console.log("Running timeouted...");
+        term.destroy();
+    }, options.timeout || 30000);
+    
     term.write(exports.createCommandFromArgs(args)+'\r');
 };
 
