@@ -1,8 +1,8 @@
 /*
  * grunt-bunyip
- * https://github.com/bleadof/grunt-bunyip
+ * https://github.com/Houston-Inc/grunt-bunyip
  *
- * Copyright (c) 2012 Tarmo Aidantausta
+ * Copyright (c) 2012 Houston Inc.
  * Licensed under the MIT license.
  */
 
