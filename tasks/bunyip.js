@@ -6,24 +6,24 @@
  * Licensed under the MIT license.
  */
 
-module.exports = function(grunt) {
+var runner = require('./lib/bunyip.js');
 
-    // Please see the grunt documentation for more information regarding task and
-    // helper creation: https://github.com/cowboy/grunt/blob/master/docs/toc.md
+module.exports = function(grunt) {
 
     // ==========================================================================
     // TASKS
     // ==========================================================================
-
     grunt.registerTask('bunyip', 'Runs bunyip through grunt', function() {
-        console.debug(this);
         var taskDone = this.async();
-        var options = {
-            args: grunt.config('bunyip'),
-            done: function(err, result, code) {
-                taskDone(err, result, code);
+        var options = grunt.config('bunyip');
+        var bunyipRunner = new runner.BunyipRunner(options);
+        bunyipRunner.on("exit", function(values) {
+            var error = true;
+            if(values.failed > 0) {
+                error = false;
             }
-        };
-        var code = runBunyip(options);
+            taskDone(error);
+        });
+        bunyipRunner.run();
     });
 };

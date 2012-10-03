@@ -1,12 +1,19 @@
 var expect = require('expect.js');
 
 var grunt = require('grunt');
-var grunt_bunyip = require('../../tasks/lib/bunyip').init(grunt);
+var grunt_bunyip = require('../../tasks/lib/bunyip');
 
-describe('grunt bunyip lib', function() {
-    var bunyipArgs = [
+describe('BunyipRunner', function() {
+    var successBunyipArgs = [
         '-f',
         'test-assets/success/test.html',
+        'local',
+        '-l',
+        '"firefox|chrome|safari|phantomjs"'
+    ];
+    var failureBunyipArgs = [
+        '-f',
+        'test-assets/failure/test.html',
         'local',
         '-l',
         '"firefox|chrome|safari|phantomjs"'
@@ -14,6 +21,7 @@ describe('grunt bunyip lib', function() {
     var badArgs = [
         'config',
         'foo;',
+        '"firefox|\'',
         '-f',
         'test-assets/success/test.html',
         'local',
@@ -21,21 +29,39 @@ describe('grunt bunyip lib', function() {
         '"firefox|chrome|safari|phantomjs"'
     ];
 
-    describe('#runBunyip', function() {
+    describe('#run', function() {
         var bunyipConf = {
-            args: bunyipArgs
+            args: successBunyipArgs
         };
         it('should run the bunyip with given arguments', function(testDone) {
-            bunyipConf.done = function() {
+            bunyipConf.args = successBunyipArgs;
+            var runner = new grunt_bunyip.BunyipRunner(bunyipConf);
+            runner.on("exit", function(values) {
+                expect(values.failed).to.eql(0);
+                expect(values.agents).to.be.ok();
+                expect(values.total).to.be.ok();
+                expect(values.time).to.be.ok();
                 testDone();
-            };
-            grunt_bunyip.runBunyip(bunyipConf);
+            });
+            runner.run();
+        });
+        it('should report the failed tests', function(testDone) {
+            bunyipConf.args = failureBunyipArgs;            
+            var runner = new grunt_bunyip.BunyipRunner(bunyipConf);
+            runner.on("exit", function(values) {
+                expect(values.failed).to.eql(values.agents*2);
+                expect(values.agents).to.be.ok();
+                expect(values.total).to.be.ok();
+                expect(values.time).to.be.ok();
+                testDone();
+            });
+            runner.run();            
         });
     });
     describe('#createCommandFromArgs', function() {
         it('should generate a bunyip command from the arguments', function() {
             var expected = 'bunyip -f test-assets/success/test.html local -l "firefox|chrome|safari|phantomjs"';
-            expect(grunt_bunyip.createCommandFromArgs(bunyipArgs)).to.eql(expected);
+            expect(grunt_bunyip.createCommandFromArgs(successBunyipArgs)).to.eql(expected);
         });
         it('should sanitize arguments like config', function() {
             var expected = 'bunyip -f test-assets/success/test.html local -l "firefox|chrome|safari|phantomjs"';
@@ -43,10 +69,11 @@ describe('grunt bunyip lib', function() {
         });
     });
     describe('#isSane', function() {
-        var insaneParams = ['config', 'foo;'];
-        it('should not accept params like config or foo;', function() {
+        var insaneParams = ['config', 'foo;', '"firefox\''];
+        it('should not accept params like config, foo; or "firefox\'', function() {
             expect(grunt_bunyip.isSane(insaneParams[0])).to.not.be.ok();
             expect(grunt_bunyip.isSane(insaneParams[1])).to.not.be.ok();
+            expect(grunt_bunyip.isSane(insaneParams[2])).to.not.be.ok();
         });
     });
 });
