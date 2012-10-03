@@ -49,8 +49,9 @@ module.exports = function(grunt) {
 
     // Load local tasks.
     grunt.loadTasks('tasks');
+    grunt.registerTask('test', 'simplemocha');
 
     // Default task.
-    grunt.registerTask('default', 'lint simplemocha');
+    grunt.registerTask('default', 'lint test');
 
 };
