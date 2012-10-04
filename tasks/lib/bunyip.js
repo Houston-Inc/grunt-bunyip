@@ -1,10 +1,66 @@
 var pty = require('pty.js');
 var EventEmitter = require('events').EventEmitter;
 
+function BunyipOutputParser() {
+}
+
+BunyipOutputParser.prototype.matchYetiEnter = function(strData) {
+    return strData.indexOf('press Enter to begin testing') !== -1;
+};
+
+BunyipOutputParser.prototype.matchTestsPassed = function(strData) {
+    return strData.indexOf('tests passed') !== -1;
+};
+
+BunyipOutputParser.prototype.parsePassedTestsData = function(strData) {
+    var values;
+    if(this.matchTestsPassed(strData)) {
+        values = {};
+        var passedRegexp = /(\d+) tests passed!\u001b\[0m \((\d+)ms\)/;
+        var passed = passedRegexp.exec(strData);
+        values.total = parseInt(passed[1], 10);
+        values.time = parseInt(passed[2], 10);
+        values.failed = 0;
+    }
+    return values;
+};
+
+BunyipOutputParser.prototype.matchTestsFailed = function(strData) {
+    return strData.indexOf('tests failed') !== -1;
+};
+
+BunyipOutputParser.prototype.parseFailedTestsData = function(strData) {
+    var values;
+    if(this.matchTestsFailed(strData)) {
+        values = {};
+        var failureRegexp = /(\d+) of (\d+) tests failed\. \((\d+)ms\)/;
+        var fails = failureRegexp.exec(strData);
+        values.failed = parseInt(fails[1], 10);
+        values.total = parseInt(fails[2], 10);
+        values.time = parseInt(fails[3], 10);
+    }
+    return values;
+};
+
+BunyipOutputParser.prototype.matchAgentsString = function(strData) {
+    return strData.indexOf('100% complete') !== -1;
+};
+
+BunyipOutputParser.prototype.parseAgents = function(strData) {
+    var agents;
+    if(this.matchAgentsString(strData)) {
+        var agentRegexp = /100% complete \((\d+)/;
+        var agent = agentRegexp.exec(strData);
+        agents = parseInt(agent[1], 10);
+    }
+    return agents;
+};
+
+exports.BunyipOutputParser = BunyipOutputParser;
+
 function BunyipRunner(options) {
     this.options = options;
-    this.failed = -1;
-    this.agents = -1;
+    this.testData = {};
 }
 
 function clone(object) {
@@ -42,56 +98,94 @@ BunyipRunner.prototype.run = function(options) {
         }, options.waitBrowsersFor || 5000);
     });
 
+    self.on('testData', function(data) {
+        self.setTestData(data);
+    });
+
+    self.on('agents', function(agents) {
+        self.setAgents(agents);
+    });
+
     var exit = function() {
         if(typeof self.exit === 'function') {
             self.exit();
         }
     };
 
-    process.on('exit', exit);
+    process.on('exit', function() {
+        if(term.writable || term.readable) {
+            term.destroy();
+        }
+    });
     term.on('exit', exit);
 
+    var parser = new BunyipOutputParser();
     var commands = 0;
+    var dataCount = 0;
+    var bashStr;
+    var command = exports.createCommandFromArgs(args);
+
+    var toBePrinted = [];
+    var partial = "";
 
     term.on('data', function(data) {
+        var printString = partial+data;
         var strData = ""+data;
-        if(strData.indexOf('bash') !== -1) {
-            if(commands > 0) {
+        var split = printString.split('\r\n');
+        if(split.length > 0) {
+            partial = split.pop();
+            toBePrinted = split;
+        }
+        if(dataCount === 1) {
+            bashStr = strData;
+            if(bashStr.indexOf('\r')) {
+                bashStr = bashStr.split('\r')[0];
+            }
+        }
+        if(bashStr && 
+           (strData).indexOf(bashStr) !== -1) {
+            if(commands === 2) {
                 self.destroyTerminal(term);
             }
             commands++;
         }
-        if(strData.indexOf('press Enter to begin testing') !== -1) {
+        if(parser.matchYetiEnter(strData)) {
             self.emit("yeti");
         }
-        if(strData.indexOf('100% complete') !== -1) {
-            var agentRegexp = /100% complete \((\d)/;
-            var agents = agentRegexp.exec(strData);
-            self.agents = parseInt(agents[1], 10);
+        var agents = parser.parseAgents(strData);
+        if(agents) {
+            self.emit('agents', agents);
         }
-        if(strData.indexOf('tests failed') !== -1) {
-            var failureRegexp = /(\d+) of (\d+) tests failed\. \((\d+)ms\)/;
-            var fails = failureRegexp.exec(strData);
-            self.failed = parseInt(fails[1], 10);
-            self.total = parseInt(fails[2], 10);
-            self.time = parseInt(fails[3], 10);
+        var failedData = parser.parseFailedTestsData(strData);
+        if(failedData) {
+            self.emit('testData', failedData);
         }
-        if(strData.indexOf('tests passed') !== -1) {
-            var passedRegexp = /(\d+) tests passed!\u001b\[0m \((\d+)ms\)/;
-            var passed = passedRegexp.exec(strData);
-            self.total = parseInt(passed[1], 10);
-            self.time = parseInt(passed[2], 10);
-            self.failed = 0;
+        var passedData = parser.parsePassedTestsData(strData);
+        if(passedData) {
+            self.emit('testData', passedData);
         }
+        for(var i=0; i<toBePrinted.length; i++) {
+            console.log(toBePrinted[i]);
+        }
+        dataCount++;
         self.emit("data", data);
-        console.log(strData);
     });
     setTimeout(function() {
         console.log("Running timeouted...");
         term.destroy();
     }, options.timeout || 30000);
-    
-    term.write(exports.createCommandFromArgs(args)+'\r');
+    term.write('\r');
+    term.write(command+'\r');
+};
+
+BunyipRunner.prototype.setAgents = function(agents) {
+    this.testData.agents = agents;
+};
+
+BunyipRunner.prototype.setTestData = function(values) {
+    this.testData.total = values.total;
+    this.testData.failed = values.failed;
+    this.testData.time = values.time;
 };
 
 BunyipRunner.prototype.destroyTerminal = function(term) {
@@ -102,14 +196,7 @@ BunyipRunner.prototype.destroyTerminal = function(term) {
 };
 
 BunyipRunner.prototype.exit = function() {
-    this.exit = true;
-    var values = {
-        agents: this.agents,
-        failed: this.failed,
-        total: this.total,
-        time: this.time
-    };
-    this.emit('exit', values);
+    this.emit('exit', this.testData);
 };
 
 exports.BunyipRunner = BunyipRunner;
