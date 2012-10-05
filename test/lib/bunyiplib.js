@@ -57,6 +57,14 @@ describe('BunyipRunner', function() {
             });
             runner.run();            
         });
+        describe('#printStrings', function() {
+            var strings = ['foo', ' bar', 'baz \r\n arr'];
+            var instance = new grunt_bunyip.BunyipRunner();
+            var log = console.log;
+            var received = instance.printStrings(strings);
+            expect(received).to.be.an('array');
+            expect(received[0]).to.eql(' arr');
+        });
     });
     describe('#createCommandFromArgs', function() {
         it('should generate a bunyip command from the arguments', function() {

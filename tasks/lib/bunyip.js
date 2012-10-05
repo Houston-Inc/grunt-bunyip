@@ -129,13 +129,8 @@ BunyipRunner.prototype.run = function(options) {
     var partial = "";
 
     term.on('data', function(data) {
-        var printString = partial+data;
         var strData = ""+data;
-        var split = printString.split('\r\n');
-        if(split.length > 0) {
-            partial = split.pop();
-            toBePrinted = split;
-        }
+        toBePrinted.push(strData);
         if(dataCount === 1) {
             bashStr = strData;
             if(bashStr.indexOf('\r')) {
@@ -164,9 +159,7 @@ BunyipRunner.prototype.run = function(options) {
         if(passedData) {
             self.emit('testData', passedData);
         }
-        for(var i=0; i<toBePrinted.length; i++) {
-            console.log(toBePrinted[i]);
-        }
+        toBePrinted = self.printStrings(toBePrinted);
         dataCount++;
         self.emit("data", data);
     });
@@ -176,6 +169,28 @@ BunyipRunner.prototype.run = function(options) {
     }, options.timeout || 30000);
     term.write('\r');
     term.write(command+'\r');
+};
+
+BunyipRunner.prototype.printStrings = function(buffer) {
+    var printThis;
+    var toBePrinted = [];
+    for(var i=0; i<buffer.length; i++) {
+        var data = buffer[i];
+        if(data.indexOf('\r\n') === -1) {
+            toBePrinted.push(data);            
+        }
+        else {
+            var split = data.split('\r\n');
+            var leftOver;
+            if(split.length > 1) {
+                leftOver = split.pop();
+            }
+            var print = toBePrinted.join('') + split.join('\r\n');
+            console.log(print);
+            toBePrinted = (leftOver ? [leftOver] : []);
+        }
+    }
+    return toBePrinted;
 };
 
 BunyipRunner.prototype.setAgents = function(agents) {
