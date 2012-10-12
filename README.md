@@ -1,8 +1,7 @@
 # grunt-bunyip
 
-It's going to the best grunt bunyip runner so far, but it's not there yet!
+It's the best grunt bunyip runner so far!
 
-<!--
 ## Getting Started
 Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install grunt-bunyip`
 
@@ -16,13 +15,28 @@ grunt.loadNpmTasks('grunt-bunyip');
 [getting_started]: https://github.com/cowboy/grunt/blob/master/docs/getting_started.md
 
 ## Documentation
-_(Coming soon)_
+
+```javascript
+    grunt.initConfig({
+        bunyip: {
+            waitBrowsersFor: 6000,
+            args: [
+                '-f',
+                'test-build/test.html',
+                'local',
+                '-l',
+                '"firefox|chrome|safari|phantomjs"'
+            ],
+            timeout: 30000
+        }
+    }
+```
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [grunt][grunt].
 
 ## Release History
-_(Nothing yet)_-->
+0.0.1 - 12-10-2012
 
 ## License
 Copyright (c) 2012 Houston Inc.  
