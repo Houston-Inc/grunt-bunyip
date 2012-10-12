@@ -3,7 +3,7 @@
 It's the best grunt bunyip runner so far!
 
 ## Getting Started
-Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started]<!-- with: `npm install grunt-bunyip`-->
+Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started]
 
 Then add this line to your project's `grunt.js` gruntfile:
 
