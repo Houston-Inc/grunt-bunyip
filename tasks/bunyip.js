@@ -13,9 +13,9 @@ module.exports = function(grunt) {
     // ==========================================================================
     // TASKS
     // ==========================================================================
-    grunt.registerTask('bunyip', 'Runs bunyip through grunt', function() {
+    grunt.registerMultiTask('bunyip', 'Runs bunyip through grunt', function() {
         var taskDone = this.async();
-        var options = grunt.config('bunyip');
+        var options = this.data;
         var bunyipRunner = new runner.BunyipRunner(options);
         bunyipRunner.on("exit", function(values) {
             var error = true;
