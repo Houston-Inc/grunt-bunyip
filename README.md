@@ -19,15 +19,28 @@ grunt.loadNpmTasks('grunt-bunyip');
 ```javascript
     grunt.initConfig({
         bunyip: {
-            waitBrowsersFor: 6000,
-            args: [
-                '-f',
-                'test-build/test.html',
-                'local',
-                '-l',
-                '"firefox|chrome|safari|phantomjs"'
-            ],
-            timeout: 30000
+			phantom: {
+            	waitBrowsersFor: 3000,
+           		args: [
+                	'-f',
+                	'test-build/test.html',
+                	'local',
+                	'-l',
+                	'"phantomjs"'
+            	],
+				timeout: 30000
+			},
+            all: {
+				waitBrowsersFor: 6000,
+                args: [
+                    '-f',
+                    'test-build/test.html',
+                    'local',
+                    '-l',
+                    '"firefox|chrome|safari|phantomjs"'
+                ],
+                timeout: 30000
+			}
         }
     }
 ```
